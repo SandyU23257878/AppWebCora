@@ -2,6 +2,7 @@
 package controlador;
 
 import dao.pedidodao;
+import dao.pedidoperfildao;
 import dao.perfildao;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -41,10 +42,20 @@ public class controladorperfil extends HttpServlet {
             if ("admin".equals(rol)) {
                 request.getRequestDispatcher("/vista/gperfil.jsp").forward(request, response);
             } else {
+                
                 List<modelo.pedido> misPedidos = pdao.listarPorUsuario(id);
-
+                pedidoperfildao perfilDao = new pedidoperfildao();
+                // resumen cliente
+                request.setAttribute("totalPedidosCliente", perfilDao.obtenerTotalPedidosCliente(id));
+                request.setAttribute("pedidosPendientesCliente", perfilDao.obtenerPedidosPendientesCliente(id));
+                request.setAttribute("pedidosCursoCliente", perfilDao.obtenerPedidosCursoCliente(id));
+                request.setAttribute("pedidosEntregadosCliente", perfilDao.obtenerPedidosEntregadosCliente(id));
+                request.setAttribute("ultimoPedidoCliente", perfilDao.obtenerUltimoPedidoCliente(id));
+                request.setAttribute("metodoFavoritoCliente", perfilDao.obtenerMetodoFavoritoCliente(id));
+                request.setAttribute("tipoEntregaFavoritoCliente", perfilDao.obtenerTipoEntregaFavoritoCliente(id));
                 request.setAttribute("listaMispedidos", misPedidos);
-
+                request.setAttribute("productosTopCliente", perfilDao.obtenerNombresProductosMasComprados(id));
+                request.setAttribute("cantidadesTopCliente", perfilDao.obtenerCantidadesProductosMasComprados(id));
                 request.getRequestDispatcher("/vista/perfil.jsp").forward(request, response);
             }
         } else {

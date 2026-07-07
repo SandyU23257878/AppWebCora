@@ -5,6 +5,7 @@
 --%>
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@page import="java.util.List, modelo.ItemCarrito"%>
 
 <!DOCTYPE html>
 <html>
@@ -26,6 +27,13 @@
     <body>
         <%
             request.setAttribute("paginaActual", "completarpedido");        
+            List<ItemCarrito> cartItems = (List<ItemCarrito>) session.getAttribute("carrito");
+            double cartSubtotal = 0.0;
+            if (cartItems != null) {
+                for (ItemCarrito item : cartItems) {
+                    cartSubtotal += item.getPrecio() * item.getCantidad();
+                }
+            }
         %>
         <jsp:include page="/componentes/encabezado.jsp" />
 
@@ -60,7 +68,7 @@
 
                         <div>
                             <div id="form-delivery-container">
-                                <form action="procesar_pedido.jsp" method="POST">
+                                <form action="procesar_pedido.jsp" method="POST" onsubmit="return validarFechasDelivery()">
                                     <input type="hidden" name="modalidad" value="delivery">
                                     
                                     <div class="mb-4">
@@ -68,25 +76,22 @@
 
                                         <div class="row g-2">
                                             <div class="col-6">
-                                                <!-- direccion -->
-                                            <input type="text" class="form-control input-cora input-redondeado-cora mb-2" placeholder="Calle, Avenida, Número de departamento o casa..." required>
+                                                <input type="text" name="direccion" class="form-control input-cora input-redondeado-cora mb-2" placeholder="Calle, Avenida, Número..." required>
                                             </div>
-                                            <!-- distrito -->
                                             <div class="col-6">
-                                        <input type="text" class="form-control input-cora input-redondeado-cora" placeholder="Lima, Lima..." required>
+                                                <input type="text" name="distrito" class="form-control input-cora input-redondeado-cora" placeholder="Distrito (e.g. Miraflores)..." required>
                                             </div>
                                         </div>                                        
-
                                     </div>
 
                                     <div class="mb-4">
-                                        <label class="form-label subcora fw-bold">Fechas sugeridas de envío (máx 2)</label>
+                                        <label class="form-label subcora fw-bold">Fechas sugeridas de envío (exacto 2 días de intervalo)</label>
                                         <div class="row g-2">
                                             <div class="col-6">
-                                                <input type="date" class="form-control input-cora input-redondeado-cora" required>
+                                                <input type="date" id="fechaMinDel" name="fechaMin" class="form-control input-cora input-redondeado-cora" required>
                                             </div>
                                             <div class="col-6">
-                                                <input type="date" class="form-control input-cora input-redondeado-cora">
+                                                <input type="date" id="fechaMaxDel" name="fechaMax" class="form-control input-cora input-redondeado-cora" required>
                                             </div>
                                         </div>
                                     </div>
@@ -94,35 +99,35 @@
                                     <div class="mb-4">
                                         <label class="form-label subcora fw-bold">Método de pago preferido</label>
                                         <div class="d-flex gap-2">
-                                            <input type="radio" class="btn-check" name="pago_del" id="tarjeta_del" checked>
+                                            <input type="radio" class="btn-check" name="metodoPago" id="tarjeta_del" value="Tarjeta" checked>
                                             <label class="btn btn-pago-cora rounded-pill px-3 flex-grow-1 text-center" for="tarjeta_del">Tarjeta</label>
 
-                                            <input type="radio" class="btn-check" name="pago_del" id="yape_del">
+                                            <input type="radio" class="btn-check" name="metodoPago" id="yape_del" value="Yape">
                                             <label class="btn btn-pago-cora rounded-pill px-3 flex-grow-1 text-center" for="yape_del">Yape</label>
 
-                                            <input type="radio" class="btn-check" name="pago_del" id="efectivo_del">
+                                            <input type="radio" class="btn-check" name="metodoPago" id="efectivo_del" value="Efectivo">
                                             <label class="btn btn-pago-cora rounded-pill px-3 flex-grow-1 text-center" for="efectivo_del">Efectivo</label>
                                         </div>
                                     </div>
 
                                     <div class="text-center mt-5">
-                                        <button type="submit" class="btn btn-confirmar">Confirmar Pedido</button>
+                                        <button type="submit" class="btn btn-confirmar" <%= (cartItems == null || cartItems.isEmpty()) ? "disabled" : "" %>>Confirmar Pedido</button>
                                     </div>
                                 </form>
                             </div>
 
                             <div id="form-retiro-container" class="d-none">
-                                <form action="procesar_pedido.jsp" method="POST">
-                                    <input type="hidden" name="modalidad" value="retiro">
+                                <form action="procesar_pedido.jsp" method="POST" onsubmit="return validarFechasRetiro()">
+                                    <input type="hidden" name="modalidad" value="fisico">
                                     
                                     <div class="mb-4">
-                                        <label class="form-label subcora fw-bold">Fechas sugeridas de recojo en tienda (máx 2)</label>
+                                        <label class="form-label subcora fw-bold">Fechas sugeridas de recojo en tienda (exacto 2 días de intervalo)</label>
                                         <div class="row g-2">
                                             <div class="col-6">
-                                                <input type="date" class="form-control input-cora input-redondeado-cora" required>
+                                                <input type="date" id="fechaMinRet" name="fechaMin" class="form-control input-cora input-redondeado-cora" required>
                                             </div>
                                             <div class="col-6">
-                                                <input type="date" class="form-control input-cora input-redondeado-cora">
+                                                <input type="date" id="fechaMaxRet" name="fechaMax" class="form-control input-cora input-redondeado-cora" required>
                                             </div>
                                         </div>
                                     </div>
@@ -130,19 +135,19 @@
                                     <div class="mb-4">
                                         <label class="form-label subcora fw-bold">Método de pago al retirar</label>
                                         <div class="d-flex gap-2">
-                                            <input type="radio" class="btn-check" name="pago_ret" id="tarjeta_ret" checked>
+                                            <input type="radio" class="btn-check" name="metodoPago" id="tarjeta_ret" value="Tarjeta" checked>
                                             <label class="btn btn-pago-cora rounded-pill px-3 flex-grow-1 text-center" for="tarjeta_ret">Tarjeta</label>
 
-                                            <input type="radio" class="btn-check" name="pago_ret" id="yape_ret">
+                                            <input type="radio" class="btn-check" name="metodoPago" id="yape_ret" value="Yape">
                                             <label class="btn btn-pago-cora rounded-pill px-3 flex-grow-1 text-center" for="yape_ret">Yape</label>
 
-                                            <input type="radio" class="btn-check" name="pago_ret" id="efectivo_ret">
+                                            <input type="radio" class="btn-check" name="metodoPago" id="efectivo_ret" value="Efectivo">
                                             <label class="btn btn-pago-cora rounded-pill px-3 flex-grow-1 text-center" for="efectivo_ret">Efectivo</label>
                                         </div>
                                     </div>
 
                                     <div class="text-center mt-5">
-                                        <button type="submit" class="btn btn-confirmar">Confirmar Pedido</button>
+                                        <button type="submit" class="btn btn-confirmar" <%= (cartItems == null || cartItems.isEmpty()) ? "disabled" : "" %>>Confirmar Pedido</button>
                                     </div>
                                 </form>
                             </div>
@@ -166,46 +171,49 @@
                             </div>
 
                             <div class="ticket-cuerpo">
-                                
-                                <div class="ticket-linea-item-cora">
+                                <%
+                                if (cartItems != null && !cartItems.isEmpty()) {
+                                    for (ItemCarrito item : cartItems) {
+                                %>
+                                <div class="ticket-linea-item-cora mb-3">
                                     <div class="d-flex justify-content-between fw-bold text-wrap">
-                                        <span>Blusa Artesanal Lino Cora</span>
-                                        <span>S/ 120.00</span>
+                                        <span><%= item.getNombre() %></span>
+                                        <span>S/ <%= String.format("%.2f", item.getPrecio() * item.getCantidad()) %></span>
                                     </div>
                                     <div class="d-flex justify-content-start text-muted" style="font-size: 0.85rem;">
-                                        <span>Cant: 1</span>
-                                        <span class="ms-4">Talla: M</span>
+                                        <span>Cant: <%= item.getCantidad() %></span>
+                                        <span class="ms-4">Color: <%= item.getColor() %></span>
+                                        <span class="ms-4">Talla: <%= item.getTalla() %></span>
                                     </div>
                                 </div>
-
-                                <div class="ticket-linea-item-cora mt-3">
-                                    <div class="d-flex justify-content-between fw-bold text-wrap">
-                                        <span>Pañuelo Seda Bordado a Mano</span>
-                                        <span>S/ 45.00</span>
-                                    </div>
-                                    <div class="d-flex justify-content-start text-muted" style="font-size: 0.85rem;">
-                                        <span>Cant: 1</span>
-                                        <span class="ms-4">Color: Terracota</span>
-                                    </div>
-                                </div>
+                                <%
+                                    }
+                                } else {
+                                %>
+                                <p class="text-center text-muted">Su carrito está vacío.</p>
+                                <%
+                                }
+                                %>
 
                                 <div class="ticket-separador-cora"></div>
 
                                 <div class="d-flex justify-content-between text-muted mb-2" style="font-size: 0.9rem;">
                                     <span>Subtotal de prendas</span>
-                                    <span>S/ 165.00</span>
+                                    <span>S/ <%= String.format("%.2f", cartSubtotal) %></span>
                                 </div>
                                 
                                 <div class="d-flex justify-content-between text-muted mb-2" style="font-size: 0.9rem;">
                                     <span>Costo de envío</span>
-                                    <span class="text-success fw-medium">¡Calculado al confirmar!</span>
+                                    <span id="textoCostoEnvio" class="fw-medium" style="color: #7c6753;">
+                                        Por definirse
+                                    </span>
                                 </div>
 
                                 <div class="ticket-separador-cora"></div>
 
                                 <div class="d-flex justify-content-between align-items-center ticket-total-cora mt-3">
                                     <span class="text-uppercase" style="font-size: 0.9rem; letter-spacing: 0.5px;">Importe Total:</span>
-                                    <span>S/ 165.00</span>
+                                    <span>S/ <%= String.format("%.2f", cartSubtotal) %></span>
                                 </div>
                                 
                             </div> 
@@ -225,21 +233,69 @@
                 
                 const formDelivery = document.getElementById('form-delivery-container');
                 const formRetiro = document.getElementById('form-retiro-container');
-
+                const textoCostoEnvio = document.getElementById('textoCostoEnvio');
                 rdoDelivery.addEventListener('change', function() {
-                    if(this.checked) {
+                    if (this.checked) {
                         formDelivery.classList.remove('d-none');
                         formRetiro.classList.add('d-none');
+
+                        textoCostoEnvio.textContent = "Por definirse";
                     }
                 });
 
                 rdoRetiro.addEventListener('change', function() {
-                    if(this.checked) {
+                    if (this.checked) {
                         formRetiro.classList.remove('d-none');
                         formDelivery.classList.add('d-none');
+
+                        textoCostoEnvio.textContent = "No aplica";
                     }
                 });
+
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('fechaMinDel').setAttribute('min', today);
+                document.getElementById('fechaMaxDel').setAttribute('min', today);
+                document.getElementById('fechaMinRet').setAttribute('min', today);
+                document.getElementById('fechaMaxRet').setAttribute('min', today);
             });
+
+            function validarIntervaloFechas(fechaMinId, fechaMaxId) {
+                const fMin = document.getElementById(fechaMinId).value;
+                const fMax = document.getElementById(fechaMaxId).value;
+                
+                if (!fMin || !fMax) {
+                    alertify.error("Debe seleccionar ambas fechas.");
+                    return false;
+                }
+                
+                const dateMin = new Date(fMin);
+                const dateMax = new Date(fMax);
+                
+                dateMin.setHours(0,0,0,0);
+                dateMax.setHours(0,0,0,0);
+                
+                const diffTime = Math.abs(dateMax - dateMin);
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (dateMax <= dateMin) {
+                    alertify.error("La fecha máxima debe ser posterior a la fecha mínima.");
+                    return false;
+                }
+                
+                if (diffDays !== 2) {
+                    alertify.error("Las fechas sugeridas deben tener exactamente 2 días de intervalo (ej. del 23 al 25).");
+                    return false;
+                }
+                return true;
+            }
+
+            function validarFechasDelivery() {
+                return validarIntervaloFechas('fechaMinDel', 'fechaMaxDel');
+            }
+
+            function validarFechasRetiro() {
+                return validarIntervaloFechas('fechaMinRet', 'fechaMaxRet');
+            }
         </script>
 
         <jsp:include page="/componentes/pie.jsp"/> 

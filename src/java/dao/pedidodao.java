@@ -514,6 +514,34 @@ public class pedidodao {
 
         return lista;
     }
+    
+    public boolean actualizarCostoDelivery(int idPedido, double costoDelivery) {
+        boolean actualizado = false;
+        String sql = "{CALL sp_actualizar_costo_delivery(?, ?)}";
+
+        try {
+            cn = conexioncora_bd.probarConexion();
+            cs = cn.prepareCall(sql);
+            cs.setInt(1, idPedido);
+            cs.setDouble(2, costoDelivery);
+
+            int filas = cs.executeUpdate();
+            actualizado = filas > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (cs != null) cs.close();
+                if (cn != null) cn.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return actualizado;
+    }
+    
     private void cerrarRecursos() {
         try {
             if (rs != null) rs.close();

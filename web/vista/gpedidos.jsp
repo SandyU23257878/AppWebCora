@@ -48,6 +48,8 @@ List<productos> listaVariantes =(List<productos>) request.getAttribute("variante
 
         <link rel="stylesheet" href="estilos/estilosa.css">
         <link rel="stylesheet" href="estilos/piestilo.css">
+        <!-- html2pdf.js library -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     </head>
     <body>
         <%
@@ -148,10 +150,24 @@ List<productos> listaVariantes =(List<productos>) request.getAttribute("variante
                                 <td><%=p.getNombreCompleto()%></td>
 
                                 <td><%=p.getFecha_pedido()%></td>
-                                <td><%=p.getTipo_entrega()%></td>
-                                <td>S/. <%=p.getCosto_delivery()%></td>
+                                <td style="text-transform: capitalize;"><%=p.getTipo_entrega()%></td>
+                                <%
+                                    String mensaje = "";
+                                    double monto = p.getCosto_delivery();
+
+                                    if ("fisico".equalsIgnoreCase(p.getTipo_entrega())) {
+                                        mensaje = "<span class='text-muted'>No aplica</span>";
+                                    } else {
+                                        if (monto <= 0) {
+                                            mensaje = "<span class='text-danger'>Por definirse</span>";
+                                        } else {
+                                            mensaje = "S/. " + String.format("%.2f", monto);
+                                        }
+                                    }
+                                %>
+                                <td><%= mensaje %></td>
                                 <td style="text-transform: capitalize;"><%=p.getDireccion().toLowerCase()%></td>
-                                <td><%=p.getMetodo_pago()%></td>
+                                <td style="text-transform: capitalize;"><%=p.getMetodo_pago()%></td>
                                 <td>
                                     <%
                                         String est = (p.getEstado() != null) ? p.getEstado().toLowerCase() : "";
@@ -168,32 +184,109 @@ List<productos> listaVariantes =(List<productos>) request.getAttribute("variante
                                     <div class="d-flex flex-wrap justify-content-center gap-1">
 
                                         <% if(!"cancelado".equalsIgnoreCase(p.getEstado())) { %>
-                                            <button class="btn btn-danger btn-sm btn-action" data-bs-toggle="modal" data-bs-target="#modalAnular<%=p.getId_pedido()%>">
+                                            <button class="btn btn-danger btn-sm btn-action"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalAnular<%=p.getId_pedido()%>">
                                                 <i class="fa-solid fa-ban"></i>
                                             </button>
 
-                                            <button type="button" class="btn btn-actualizar btn-sm btn-action" data-bs-toggle="modal" data-bs-target="#modalEstado<%=p.getId_pedido()%>">
+                                            <button type="button"
+                                                    class="btn btn-actualizar btn-sm btn-action"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalEstado<%=p.getId_pedido()%>">
                                                 <i class="fa-solid fa-arrows-rotate"></i>
                                             </button>
-
-                                            <button type="button" class="btn btn-outline-primary btn-sm btn-action">
-                                                <i class="fa-solid fa-download"></i>
-                                            </button>      
                                         <% } %>
 
-                                        <a class="btn btn-info btn-sm btn-action" 
+                                        <%-- BOTÓN EDITAR DELIVERY SOLO SI ES DELIVERY Y NO ESTÁ CANCELADO --%>
+                                        <% if("delivery".equalsIgnoreCase(p.getTipo_entrega()) && !"cancelado".equalsIgnoreCase(p.getEstado())) { %>
+                                            <button type="button"
+                                                    class="btn btn-warning btn-sm btn-action"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalDelivery<%=p.getId_pedido()%>"
+                                                    title="Editar costo de delivery">
+                                                <i class="fa-solid fa-truck-fast"></i>
+                                            </button>
+                                        <% } %>
+
+                                        <% if(!"cancelado".equalsIgnoreCase(p.getEstado()) && !"pendiente".equalsIgnoreCase(p.getEstado())) { %>
+                                            <a href="controladorpedido?accion=comprobante&id=<%=p.getId_pedido()%>"
+                                               class="btn btn-outline-primary btn-sm btn-action">
+                                                <i class="fa-solid fa-download"></i>
+                                            </a>
+                                        <% } %>
+
+                                        <a class="btn btn-info btn-sm btn-action"
                                            href="controladorpedido?accion=detalle&id=<%=p.getId_pedido()%>">
                                             <i class="fa-solid fa-eye"></i>
                                         </a>
 
                                     </div>
                                 </td>
+
                             </tr>
+                            <% if("delivery".equalsIgnoreCase(p.getTipo_entrega()) && !"cancelado".equalsIgnoreCase(p.getEstado())) { %>
+                            <div class="modal fade" id="modalDelivery<%=p.getId_pedido()%>" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow-lg">
+
+                                        <form action="controladorpedido" method="post">
+                                            <input type="hidden" name="accion" value="actualizarDelivery">
+                                            <input type="hidden" name="idPedido" value="<%=p.getId_pedido()%>">
+
+                                            <div class="modal-header border-bottom-0">
+                                                <h5 class="modal-title fw-bold" style="color:#a86c3d;">
+                                                    <i class="fa-solid fa-truck-fast me-2"></i>Actualizar costo de delivery
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Pedido</label>
+                                                    <input type="text" class="form-control bg-light" value="#<%=p.getId_pedido()%>" readonly>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Cliente</label>
+                                                    <input type="text" class="form-control bg-light" value="<%=p.getNombreCompleto()%>" readonly>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Tipo de entrega</label>
+                                                    <input type="text" class="form-control bg-light" value="<%=p.getTipo_entrega()%>" readonly>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-semibold">Costo actual de delivery</label>
+                                                    <input type="number"
+                                                           step="0.01"
+                                                           min="0"
+                                                           name="costoDelivery"
+                                                           class="form-control"
+                                                           value="<%=p.getCosto_delivery()%>"
+                                                           required>
+                                                    <small class="text-muted">Puedes aumentar o disminuir el monto según corresponda.</small>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer border-top-0 bg-light">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <button type="submit" class="btn btn-warning text-dark fw-semibold">
+                                                    Guardar delivery
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                    </div>
+                                </div>
+                            </div>
+                            <% } %>
                             <div class="modal fade" id="modalEstado<%=p.getId_pedido()%>">
                                 <div class="modal-dialog modal-dialog-centered">
                                     <div class="modal-content border-0 shadow-lg">
-                                        <form action="controladorpedido" method="post">
-                                            <input type="hidden" name="accion" value="cambiarEstado">
+                                         <form action="controladorpedido" method="post" onsubmit="return validarFechasCambioEstado(this)">
+                                              <input type="hidden" name="accion" value="cambiarEstado">
                                             <input type="hidden" name="id" value="<%=p.getId_pedido()%>">
 
                                             <div class="modal-header border-bottom-0">
@@ -500,6 +593,38 @@ List<productos> listaVariantes =(List<productos>) request.getAttribute("variante
                                             
                                        
         </main>
+
+        <!-- Modal para exportar PDF -->
+        <div class="modal fade" id="modalPDF" tabindex="-1" aria-labelledby="modalPDFLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-light border-bottom-0">
+                        <h5 class="modal-title fw-bold text-secondary" id="modalPDFLabel">
+                            <i class="fa-solid fa-file-pdf text-danger me-2"></i>Exportar Reporte de Pedidos
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4 text-start">
+                        <p class="text-muted text-center mb-4">Seleccione la modalidad de reporte que desea descargar.</p>
+                        <div class="d-grid gap-3">
+                            <button class="btn btn-outline-primary text-start p-3 rounded-3" onclick="exportarPedidosPDF('visible')">
+                                <i class="fa-solid fa-list-check me-2 fs-5"></i>
+                                <strong>Reporte de pedidos filtrados / visibles</strong>
+                                <div class="small text-muted mt-1">Exporta únicamente los pedidos que se muestran actualmente en pantalla.</div>
+                            </button>
+                            <button class="btn btn-outline-secondary text-start p-3 rounded-3" onclick="exportarPedidosPDF('completo')">
+                                <i class="fa-solid fa-database me-2 fs-5"></i>
+                                <strong>Reporte completo de todos los pedidos</strong>
+                                <div class="small text-muted mt-1">Exporta la totalidad de los pedidos registrados en el sistema.</div>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top-0 bg-light">
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <jsp:include page="/componentes/pie.jsp" /> 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/alertify.min.js"></script>
@@ -910,6 +1035,121 @@ List<productos> listaVariantes =(List<productos>) request.getAttribute("variante
 
         });
 
+        function validarFechasCambioEstado(form) {
+            const estadoRadio = form.querySelector('input[name="estado"]:checked');
+            if (!estadoRadio) return true;
+            
+            const estado = estadoRadio.value;
+            if (estado === 'curso' || estado === 'entregado') {
+                const fMinInput = form.querySelector('input[name="fechaMin"]');
+                const fMaxInput = form.querySelector('input[name="fechaMax"]');
+                if (!fMinInput || !fMaxInput) return true;
+                
+                const fMin = fMinInput.value;
+                const fMax = fMaxInput.value;
+                
+                if (!fMin || !fMax) {
+                    alertify.error("Las fechas de entrega son obligatorias para el estado 'En curso' o 'Entregado'.");
+                    return false;
+                }
+                
+                const dateMin = new Date(fMin);
+                const dateMax = new Date(fMax);
+                dateMin.setHours(0,0,0,0);
+                dateMax.setHours(0,0,0,0);
+                
+                if (dateMax <= dateMin) {
+                    alertify.error("La fecha máxima de entrega debe ser posterior a la fecha mínima.");
+                    return false;
+                }
+                
+                const diffTime = Math.abs(dateMax - dateMin);
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays !== 2) {
+                    alertify.error("El intervalo de entrega estimado debe ser de exactamente 2 días.");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function exportarPedidosPDF(tipo) {
+            // Hide modal
+            const modalEl = document.getElementById('modalPDF');
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) {
+                modalInstance.hide();
+            }
+            
+            // Create cloned container to format report
+            const reportContainer = document.createElement('div');
+            reportContainer.style.padding = '30px';
+            reportContainer.style.fontFamily = 'Arial, sans-serif';
+            
+            // Add header
+            const dateStr = new Date().toLocaleDateString('es-PE', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+            
+            reportContainer.innerHTML = `
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                <div class="d-flex justify-content-between align-items-center mb-4 pb-2" style="border-bottom: 2px solid #5a67d8;">
+                    <div>
+                        <h2 style="font-family: 'Luxurious Roman', serif; color: #AF2369; margin: 0;">CORA: Hecho a Mano</h2>
+                        <h5 class="text-muted mt-1">Reporte de Gestión de Pedidos</h5>
+                    </div>
+                    <div class="text-end text-muted small">
+                        <p class="m-0">Generado el: \${dateStr}</p>
+                        <p class="m-0">Tipo: \${tipo === 'visible' ? 'Pedidos Filtrados' : 'Todos los Pedidos'}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Clone the table
+            const originalTable = document.querySelector('table.table');
+            if (!originalTable) {
+                alertify.error("No se encontró la tabla de pedidos.");
+                return;
+            }
+            
+            const clonedTable = originalTable.cloneNode(true);
+            clonedTable.className = "table table-striped table-bordered table-sm small align-middle";
+            
+            // Remove "Acciones" columns (the last column) from the cloned table
+            const headerRow = clonedTable.querySelector('thead tr');
+            if (headerRow) {
+                headerRow.removeChild(headerRow.lastElementChild); // Remove 'Acciones' header
+            }
+            
+            const bodyRows = clonedTable.querySelectorAll('tbody tr');
+            bodyRows.forEach(row => {
+                const isHidden = row.style.display === "none";
+                if (tipo === 'visible' && isHidden) {
+                    row.parentNode.removeChild(row);
+                } else {
+                    // Ensure the row is visible in the print view
+                    row.style.display = "";
+                    // Remove the last column (Acciones column)
+                    if (row.lastElementChild) {
+                        row.removeChild(row.lastElementChild);
+                    }
+                }
+            });
+            
+            reportContainer.appendChild(clonedTable);
+            
+            const opt = {
+                margin:       0.3,
+                filename:     'Reporte_Pedidos_' + (tipo === 'visible' ? 'Filtrado' : 'Completo') + '.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+            };
+            
+            html2pdf().from(reportContainer).set(opt).save();
+        }
 </script>
     </body>
 </html>

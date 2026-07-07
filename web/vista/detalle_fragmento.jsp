@@ -39,8 +39,8 @@
 
     <div class="ticket-separador-cora"></div>
 
-    <div class="table-responsive">
-        <table class="table table-borderless">
+    <div>
+    <table class="table table-borderless" style="width:100%;">
             <thead>
                 <tr class="subcora" style="border-bottom: 1px solid #d1c4b9;">
                     <th class="text-start">Producto</th>
@@ -60,8 +60,30 @@
         </table>
     </div>
 
+    <div class="d-flex justify-content-between mb-2">
+        <span>Subtotal:</span>
+        <span>S/. <%= String.format("%.2f", total.getSubtotal()) %></span>
+    </div>
+
+    <div class="d-flex justify-content-between mb-2">
+        <span>Costo de Delivery:</span>
+
+        <% if ("delivery".equalsIgnoreCase(pedido.getTipo_entrega())) { %>
+            <span>
+                <%= pedido.getCosto_delivery() > 0
+                        ? "S/. " + String.format("%.2f", pedido.getCosto_delivery())
+                        : "Por definirse" %>
+            </span>
+        <% } else { %>
+            <span>No aplica</span>
+        <% } %>
+    </div>
+
     <div class="ticket-separador-cora"></div>
+
     <div class="text-end">
-        <h5 class="ticket-total-cora">Total: S/. <%=String.format("%.2f", total.getTotal())%></h5>
+        <h5 class="ticket-total-cora">
+            Total: S/. <%= String.format("%.2f", total.getTotal()) %>
+        </h5>
     </div>
 </div>
